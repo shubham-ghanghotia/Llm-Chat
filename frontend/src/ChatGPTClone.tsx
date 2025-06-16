@@ -4,6 +4,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, Moon, Sun, Menu, X } from "lucide-react";
 import clsx from "clsx";
 import { motion } from "framer-motion";
+import { useSocketContext } from "./hooks/SocketProvider";
+import ReactMarkdown from 'react-markdown';
+
 
 type Message = {
   role: "user" | "assistant" | "system";
@@ -25,6 +28,7 @@ export default function ChatGPTClone() {
   });
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { socket } = useSocketContext()
 
   const sendMessage = async () => {
     if (!input.trim()) return;
@@ -32,14 +36,55 @@ export default function ChatGPTClone() {
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
 
-    const responseMessage: Message = {
-      role: "assistant",
-      content: `Echo: ${input}`,
-    };
-    setTimeout(() => {
-      setMessages((prev) => [...prev, responseMessage]);
-    }, 500);
+    if (socket) {
+      socket.emit('chat-with-llm', userMessage)
+    }
   };
+
+  const currentAssistantMessage = useRef("");
+
+  useEffect(() => {
+    if (socket) {
+      socket.on("llm-response-chunk", (data) => {
+        currentAssistantMessage.current += data.chunk;
+
+        // Update the last assistant message or create one if not yet added
+        setMessages((prev) => {
+          const last = prev[prev.length - 1];
+
+          if (last?.role === "assistant") {
+            // Update last assistant message
+            return [
+              ...prev.slice(0, -1),
+              { role: "assistant", content: currentAssistantMessage.current }
+            ];
+          } else {
+            // Add new assistant message
+            return [
+              ...prev,
+              { role: "assistant", content: currentAssistantMessage.current }
+            ];
+          }
+        });
+      });
+
+      socket.on("llm-response-end", () => {
+        currentAssistantMessage.current = "";
+      });
+
+      socket.on("llm-response-error", (err) => {
+        console.error("LLM error", err);
+      });
+
+      return () => {
+        socket.off("llm-response-chunk");
+        socket.off("llm-response-end");
+        socket.off("llm-response-error");
+      };
+    }
+  }, [socket]);
+
+
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -89,8 +134,8 @@ export default function ChatGPTClone() {
                     ? "bg-gray-700"
                     : "bg-gray-200"
                   : darkMode
-                  ? "hover:bg-gray-800"
-                  : "hover:bg-gray-100"
+                    ? "hover:bg-gray-800"
+                    : "hover:bg-gray-100"
               )}
             >
               {title}
@@ -140,15 +185,15 @@ export default function ChatGPTClone() {
             <div
               key={idx}
               className={clsx(
-                "max-w-2xl px-4 py-2 rounded-md whitespace-pre-wrap",
+                "max-w-6xl px-4 py-2 rounded-md whitespace-pre-wrap",
                 msg.role === "user"
                   ? "ml-auto bg-blue-100 text-black"
                   : darkMode
-                  ? "bg-gray-800"
-                  : "bg-white"
+                    ? "bg-gray-800"
+                    : "bg-white"
               )}
             >
-              {msg.content}
+              <ReactMarkdown>{msg.content}</ReactMarkdown>
             </div>
           ))}
           <div ref={scrollRef} />
