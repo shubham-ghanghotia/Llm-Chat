@@ -6,6 +6,7 @@ import {
 } from 'react';
 import type { ReactNode } from 'react';
 import io, { Socket } from 'socket.io-client';
+import { useAuth } from '../contexts/AuthContext';
 
 interface SocketContextType {
   socket: Socket | null;
@@ -21,16 +22,44 @@ const SocketContext = createContext<SocketContextType | undefined>(undefined);
 
 export function SocketProvider({ children }: SocketProviderProps) {
   const [socket, setSocket] = useState<Socket | null>(null);
+  const { token, isAuthenticated } = useAuth();
 
   useEffect(() => {
-    const socketInstance = io(SERVER_URL);
+    if (!isAuthenticated || !token) {
+      if (socket) {
+        socket.disconnect();
+        setSocket(null);
+      }
+      return;
+    }
+
+    console.log('Connecting to server:', SERVER_URL);
+    const socketInstance = io(SERVER_URL, {
+      auth: {
+        token: token
+      }
+    });
+    
+    socketInstance.on('connect', () => {
+      console.log('Socket connected from provider');
+    });
+    
+    socketInstance.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+    });
+
+    socketInstance.on('auth_error', (error) => {
+      console.error('Socket authentication error:', error);
+    });
+    
     setSocket(socketInstance);
 
     return () => {
+      console.log('Disconnecting socket');
       socketInstance.disconnect();
       setSocket(null);
     };
-  }, []);
+  }, [isAuthenticated, token]);
 
   return (
     <SocketContext.Provider value={{ socket }}>
