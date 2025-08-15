@@ -40,9 +40,12 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   return (
     <motion.aside
       initial={false}
-      animate={{ x: isOpen ? 0 : -300 }}
+      animate={{ 
+        x: isOpen ? 0 : -300,
+        width: isOpen ? 256 : 0 // 256px = w-64
+      }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className={`fixed md:static top-0 left-0 z-40 h-full w-64 border-r bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-black dark:text-white ${className}`}
+      className={`fixed md:relative top-0 left-0 z-40 h-full border-r bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-black dark:text-white overflow-hidden ${className}`}
     >
       {/* Header */}
       <div className="p-4 flex justify-between items-center border-b border-gray-200 dark:border-gray-700">

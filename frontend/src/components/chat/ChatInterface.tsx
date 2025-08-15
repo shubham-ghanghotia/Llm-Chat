@@ -21,6 +21,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ className = '' }) 
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [inputValue, setInputValue] = useState('');
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting' | 'error'>('disconnected');
 
   // Hooks
@@ -34,7 +35,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ className = '' }) 
     deleteChat, 
     sendMessage 
   } = useChat();
-  const { isDark } = useTheme();
+  const { isDark, toggleTheme } = useTheme();
 
   // Socket connection status
   useEffect(() => {
@@ -63,26 +64,33 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ className = '' }) 
   // Event handlers
   const handleNewChat = () => {
     createChat();
+    setInputValue(''); // Clear input when creating new chat
   };
 
   const handleChatSelect = (chatId: string) => {
     setActiveChat(chatId);
+    setInputValue(''); // Clear input when switching chats
   };
 
   const handleDeleteChat = (chatId: string) => {
     deleteChat(chatId);
   };
 
-  const handleSendMessage = async (content: string) => {
+  const handleInputChange = (value: string) => {
+    setInputValue(value);
+  };
+
+  const handleSendMessage = async () => {
     if (!isAuthenticated) {
       setShowAuthModal(true);
       return;
     }
 
-    if (!content.trim()) return;
+    if (!inputValue.trim()) return;
 
     try {
-      await sendMessage(content);
+      await sendMessage(inputValue.trim());
+      setInputValue(''); // Clear input after sending
     } catch (error) {
       console.error('Failed to send message:', error);
     }
@@ -122,7 +130,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ className = '' }) 
 
   return (
     <div className={`flex h-screen w-full overflow-hidden ${className}`}>
-      {/* Sidebar */}
+      {/* Sidebar - Fixed on mobile, relative on desktop */}
       <ChatSidebar
         chats={chats}
         activeChatId={activeChat?.id || null}
@@ -138,8 +146,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ className = '' }) 
         onClose={() => setSidebarOpen(false)}
       />
 
-      {/* Main Chat Area */}
-      <main className="flex-1 flex flex-col relative z-10 w-full">
+      {/* Main Chat Area - Adjusts width based on sidebar state */}
+      <main className={`flex-1 flex flex-col relative z-10 transition-all duration-300`}>
         {/* Header */}
         <ChatHeader
           title={activeChat?.title || "New Chat"}
@@ -147,7 +155,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ className = '' }) 
           isDarkMode={isDark}
           sidebarOpen={sidebarOpen}
           onToggleSidebar={handleToggleSidebar}
-          onToggleTheme={() => {}} // This will be handled by theme context
+          onToggleTheme={toggleTheme}
         />
 
         {/* Messages */}
@@ -159,9 +167,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ className = '' }) 
         {/* Input */}
         <div className="p-4 border-t border-gray-200 dark:border-gray-700">
           <ChatInput
-            value=""
-            onChange={() => {}} // This will be handled by local state
-            onSend={() => handleSendMessage("")}
+            value={inputValue}
+            onChange={handleInputChange}
+            onSend={handleSendMessage}
             placeholder={connectionStatus !== 'connected' ? "Connecting..." : "Type your message..."}
             disabled={connectionStatus !== 'connected' || isTyping}
             isLoading={isTyping}
