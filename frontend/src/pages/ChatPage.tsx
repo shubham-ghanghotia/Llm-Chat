@@ -1,8 +1,8 @@
 import React from 'react';
-import ChatGPTClone from '../ChatGPTClone';
+import { ChatInterface } from '../components/chat/ChatInterface';
 
 const ChatPage: React.FC = () => {
-  return <ChatGPTClone />;
+  return <ChatInterface />;
 };
 
 export default ChatPage;
