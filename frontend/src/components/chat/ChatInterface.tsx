@@ -17,12 +17,13 @@ interface ChatInterfaceProps {
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({ className = '' }) => {
   // State
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Start closed by default
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting' | 'error'>('disconnected');
+  const [isMobile, setIsMobile] = useState(false);
 
   // Hooks
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
@@ -36,6 +37,23 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ className = '' }) 
     sendMessage 
   } = useChat();
   const { isDark, toggleTheme } = useTheme();
+
+  // Detect mobile device and set initial sidebar state
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768; // md breakpoint
+      setIsMobile(mobile);
+      // On mobile, sidebar should be closed by default
+      if (mobile && sidebarOpen) {
+        setSidebarOpen(false);
+      }
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, [sidebarOpen]);
 
   // Socket connection status
   useEffect(() => {
@@ -65,11 +83,19 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ className = '' }) 
   const handleNewChat = () => {
     createChat();
     setInputValue(''); // Clear input when creating new chat
+    // Close sidebar on mobile after creating new chat
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
   };
 
   const handleChatSelect = (chatId: string) => {
     setActiveChat(chatId);
     setInputValue(''); // Clear input when switching chats
+    // Close sidebar on mobile after selecting chat
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
   };
 
   const handleDeleteChat = (chatId: string) => {
@@ -102,6 +128,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ className = '' }) 
 
   const handleToggleSidebar = () => {
     setSidebarOpen(prev => !prev);
+  };
+
+  const handleCloseSidebar = () => {
+    setSidebarOpen(false);
   };
 
   const handleToggleSettings = () => {
@@ -143,7 +173,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ className = '' }) 
         onToggleSettings={handleToggleSettings}
         onLogout={handleLogout}
         onLogin={handleLogin}
-        onClose={() => setSidebarOpen(false)}
+        onClose={handleCloseSidebar}
       />
 
       {/* Main Chat Area - Adjusts width based on sidebar state */}
