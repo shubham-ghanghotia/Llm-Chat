@@ -43,17 +43,20 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ className = '' }) 
     const checkMobile = () => {
       const mobile = window.innerWidth < 768; // md breakpoint
       setIsMobile(mobile);
-      // On mobile, sidebar should be closed by default
-      if (mobile && sidebarOpen) {
-        setSidebarOpen(false);
-      }
     };
 
     checkMobile();
     window.addEventListener('resize', checkMobile);
     
     return () => window.removeEventListener('resize', checkMobile);
-  }, [sidebarOpen]);
+  }, []); // Empty dependency array to run only once on mount
+
+  // Set initial sidebar state for mobile
+  useEffect(() => {
+    if (isMobile && sidebarOpen) {
+      setSidebarOpen(false);
+    }
+  }, [isMobile]); // Only run when mobile state changes
 
   // Socket connection status
   useEffect(() => {
